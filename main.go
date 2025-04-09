@@ -14,14 +14,21 @@ func main() {
 		Handler: mux,
 	}
 
+	cfg := &apiConfig{}
+
 	fileServer := http.StripPrefix("/app", http.FileServer(http.Dir("./html")))
-	mux.Handle("/app", fileServer) //mkae sure to give it a directory
+	mux.Handle("/app", cfg.middlewareMetricsInc(fileServer)) //mkae sure to give it a directory
 
 	imageServer := http.StripPrefix("/app/assets/", http.FileServer(http.Dir("images")))
 
 	mux.Handle("/app/assets/", imageServer)
 
-	mux.Handle("/healthz", http.HandlerFunc(isReady))
+	mux.Handle("GET /healthz", http.HandlerFunc(isReady))
+
+	mux.HandleFunc("GET /metrics", cfg.handleHits)
+
+	mux.HandleFunc("POST /reset", cfg.resetHitsHandler)
+
 	if err := server.ListenAndServe(); err != nil {
 		panic(err)
 	}
