@@ -1,8 +1,9 @@
 package main
 
 import (
-	"fmt"
+	"html/template"
 	"net/http"
+	"path/filepath"
 	"sync/atomic"
 )
 
@@ -20,13 +21,34 @@ func (c *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 func (c *apiConfig) handleHits(w http.ResponseWriter, _ *http.Request) {
 
 	hits := c.fileServerHits.Load()
-	ans := fmt.Sprintf("Hits: %d", hits)
-	_, err := w.Write([]byte(ans))
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+
+	templatePath := filepath.Join("html", "admin.html")
+
+	templ, err := template.ParseFiles(templatePath)
 	if err != nil {
-		return
+		http.Error(w, "failed to parse template", http.StatusInternalServerError)
 	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	err = templ.Execute(w, struct {
+		Hits int32
+	}{
+		Hits: hits,
+	})
+
+	if err != nil {
+		http.Error(w, "failed to remder template", http.StatusInternalServerError)
+	}
+
+	//doesnt load through html
+	//ans := fmt.Sprintf("Hits: %d", hits)
+	//_, err := w.Write([]byte(ans))
+	//w.WriteHeader(http.StatusOK)
+	//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	//if err != nil {
+	//	return
+	//}
 }
 
 func (c *apiConfig) resetHits() {

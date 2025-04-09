@@ -20,14 +20,13 @@ func main() {
 	mux.Handle("/app", cfg.middlewareMetricsInc(fileServer)) //mkae sure to give it a directory
 
 	imageServer := http.StripPrefix("/app/assets/", http.FileServer(http.Dir("images")))
+	mux.Handle("/app/assets/", cfg.middlewareMetricsInc(imageServer))
 
-	mux.Handle("/app/assets/", imageServer)
+	mux.Handle("GET /admin/healthz", http.HandlerFunc(isReady))
 
-	mux.Handle("GET /healthz", http.HandlerFunc(isReady))
+	mux.HandleFunc("GET /admin/metrics", cfg.handleHits)
 
-	mux.HandleFunc("GET /metrics", cfg.handleHits)
-
-	mux.HandleFunc("POST /reset", cfg.resetHitsHandler)
+	mux.HandleFunc("POST /admin/reset", cfg.resetHitsHandler)
 
 	if err := server.ListenAndServe(); err != nil {
 		panic(err)
